@@ -1,0 +1,1942 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MediMinder — Hospital Medication Reminder System</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+<style>
+
+/* =====================================================================
+   DESIGN TOKENS
+   A small, deliberate palette so the whole app reads as one product.
+   - Deep clinical teal  → primary actions, hospital identity
+   - Warm amber          → the one accent reserved for medicine/attention
+   - Coral red           → alerts only (never decorative)
+   - Calm mint-white bg  → keeps long dashboard sessions easy on the eyes
+===================================================================== */
+
+:root {
+  --ink:            #142622;
+  --ink-soft:       #4B5C57;
+  --bg:             #F3F6F4;
+  --surface:        #FFFFFF;
+  --surface-sunk:   #EAF0EE;
+  --border:         #DCE5E1;
+
+  --teal-900:       #0A3530;
+  --teal-800:       #0C433C;
+  --teal-700:       #0F5C52;
+  --teal-600:       #12776A;
+  --teal-100:       #E1F0EC;
+
+  --amber-600:      #C9821B;
+  --amber-100:      #FBEDD8;
+
+  --red-600:        #C93F2E;
+  --red-100:        #FBE4E0;
+
+  --green-600:      #1E8A5F;
+  --green-100:      #E1F3EA;
+
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 22px;
+
+  --shadow-card: 0 1px 2px rgba(20,38,34,0.04), 0 8px 24px -12px rgba(20,38,34,0.18);
+  --shadow-pop:  0 20px 60px -12px rgba(10,53,48,0.35);
+
+  --font-display: "Fraunces", Georgia, serif;
+  --font-body: "Manrope", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--font-body);
+  background: var(--bg);
+  color: var(--ink);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+.hidden { display: none !important; }
+button { cursor: pointer; font-family: inherit; }
+button:focus-visible,
+input:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--teal-600);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+}
+
+/* =====================================================================
+   LOGIN SCREEN
+===================================================================== */
+
+#loginScreen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background:
+    radial-gradient(circle at 15% 15%, rgba(255,255,255,0.06), transparent 40%),
+    linear-gradient(160deg, var(--teal-900), var(--teal-700) 65%, var(--teal-600));
+}
+
+.login-shell {
+  width: 100%;
+  max-width: 940px;
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-pop);
+}
+
+.login-brand {
+  padding: 48px 40px;
+  background: linear-gradient(175deg, var(--teal-800), var(--teal-600));
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.login-brand .mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.login-brand .mark svg { flex-shrink: 0; }
+
+.login-brand h1 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 34px;
+  line-height: 1.2;
+  margin-top: 40px;
+}
+
+.login-brand p {
+  margin-top: 14px;
+  color: rgba(255,255,255,0.78);
+  font-size: 15px;
+  line-height: 1.6;
+  max-width: 34ch;
+}
+
+.login-brand ul {
+  list-style: none;
+  margin-top: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.login-brand li {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  font-size: 13.5px;
+  color: rgba(255,255,255,0.85);
+}
+
+.login-brand li svg { flex-shrink: 0; margin-top: 2px; }
+
+.login-form-side {
+  padding: 48px 44px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.login-form-side h2 {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.login-form-side .sub {
+  color: var(--ink-soft);
+  font-size: 14px;
+  margin-top: 6px;
+  margin-bottom: 26px;
+}
+
+.role-switch {
+  display: flex;
+  background: var(--surface-sunk);
+  border-radius: var(--radius-sm);
+  padding: 4px;
+  margin-bottom: 20px;
+}
+
+.role-switch button {
+  flex: 1;
+  border: none;
+  background: transparent;
+  padding: 10px;
+  border-radius: 6px;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--ink-soft);
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.role-switch button.active {
+  background: var(--surface);
+  color: var(--teal-700);
+  box-shadow: 0 1px 4px rgba(20,38,34,0.12);
+}
+
+.field { margin-bottom: 14px; }
+
+.field label {
+  display: block;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--ink-soft);
+  margin-bottom: 6px;
+}
+
+.field input {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 15px;
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.field input:focus { border-color: var(--teal-600); }
+
+.login-form-side .primary-btn { width: 100%; margin-top: 6px; }
+
+.login-error {
+  margin-top: 12px;
+  padding: 10px 12px;
+  background: var(--red-100);
+  color: var(--red-600);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.demo-info {
+  margin-top: 22px;
+  padding: 13px 14px;
+  background: var(--surface-sunk);
+  border-radius: var(--radius-sm);
+  font-size: 12.5px;
+  color: var(--ink-soft);
+  line-height: 1.6;
+}
+
+.demo-info b { color: var(--ink); }
+
+.primary-btn {
+  background: var(--teal-700);
+  color: #fff;
+  border: none;
+  padding: 12px 20px;
+  border-radius: var(--radius-sm);
+  font-weight: 700;
+  font-size: 14.5px;
+  transition: background 0.15s ease;
+}
+
+.primary-btn:hover { background: var(--teal-800); }
+
+@media (max-width: 760px) {
+  .login-shell { grid-template-columns: 1fr; }
+  .login-brand { display: none; }
+}
+
+/* =====================================================================
+   HOSPITAL CONSOLE
+===================================================================== */
+
+#hospitalScreen { min-height: 100vh; }
+
+.h-header {
+  background: var(--teal-900);
+  color: #fff;
+  padding: 16px 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.h-header .brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.h-header .who {
+  font-size: 12.5px;
+  color: rgba(255,255,255,0.65);
+  margin-top: 2px;
+}
+
+.ghost-btn {
+  background: rgba(255,255,255,0.08);
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.18);
+  padding: 9px 16px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.ghost-btn:hover { background: rgba(255,255,255,0.16); }
+
+.h-layout { display: flex; min-height: calc(100vh - 61px); }
+
+.h-sidebar {
+  width: 236px;
+  background: var(--teal-800);
+  padding: 18px 12px;
+  flex-shrink: 0;
+}
+
+.h-nav-btn {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  padding: 11px 13px;
+  margin-bottom: 4px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: rgba(255,255,255,0.75);
+  font-size: 13.8px;
+  font-weight: 600;
+  text-align: left;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.h-nav-btn svg { flex-shrink: 0; opacity: 0.85; }
+
+.h-nav-btn:hover { background: rgba(255,255,255,0.07); color: #fff; }
+
+.h-nav-btn.active {
+  background: var(--surface);
+  color: var(--teal-800);
+}
+
+.h-nav-btn.active svg { opacity: 1; }
+
+.h-content { flex: 1; padding: 30px 34px; overflow-x: hidden; }
+
+.page { display: none; }
+.page.active { display: block; animation: pageIn 0.25s ease; }
+
+@keyframes pageIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.page-head { margin-bottom: 22px; }
+.page-head h2 {
+  font-family: var(--font-display);
+  font-size: 25px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.page-head p { color: var(--ink-soft); font-size: 13.8px; margin-top: 4px; }
+
+/* Stat cards */
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.stat-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 20px;
+  box-shadow: var(--shadow-card);
+}
+
+.stat-card .stat-icon {
+  width: 34px; height: 34px;
+  border-radius: 9px;
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 14px;
+}
+
+.stat-card h3 { font-size: 12.5px; color: var(--ink-soft); font-weight: 700; letter-spacing: 0.01em; }
+.stat-card p { font-family: var(--font-display); font-size: 32px; font-weight: 600; margin-top: 6px; color: var(--ink); }
+
+/* Panels / forms */
+
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  padding: 26px;
+  max-width: 900px;
+}
+
+.panel + .panel { margin-top: 20px; }
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.form-group { display: flex; flex-direction: column; }
+.form-group.span-2 { grid-column: 1 / -1; }
+
+.form-group label {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--ink-soft);
+  margin-bottom: 6px;
+}
+
+.form-group input,
+.form-group select {
+  padding: 11px 13px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 14.5px;
+  color: var(--ink);
+  background: var(--surface);
+}
+
+.form-group input:focus,
+.form-group select:focus { border-color: var(--teal-600); }
+
+.form-actions {
+  margin-top: 22px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.form-note {
+  margin-top: 22px;
+  padding: 12px 14px;
+  background: var(--teal-100);
+  color: var(--teal-800);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  display: none;
+}
+
+.form-note.show { display: block; }
+
+.form-note.error { background: var(--red-100); color: var(--red-600); }
+
+/* Table */
+
+.table-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+}
+
+table { width: 100%; border-collapse: collapse; }
+
+th {
+  text-align: left;
+  font-size: 11.5px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  background: var(--surface-sunk);
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+td {
+  padding: 13px 16px;
+  border-bottom: 1px solid var(--border);
+  font-size: 14px;
+  color: var(--ink);
+}
+
+tr:last-child td { border-bottom: none; }
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.pill.ok { background: var(--green-100); color: var(--green-600); }
+.pill.warn { background: var(--amber-100); color: var(--amber-600); }
+.pill.due { background: var(--red-100); color: var(--red-600); }
+.pill.neutral { background: var(--surface-sunk); color: var(--ink-soft); }
+
+.empty-row td { text-align: center; color: var(--ink-soft); padding: 30px; font-size: 13.5px; }
+
+/* =====================================================================
+   PATIENT SCREEN — deliberately minimal, one job at a time
+===================================================================== */
+
+#patientScreen { min-height: 100vh; background: var(--bg); }
+
+.p-header {
+  background: var(--teal-800);
+  color: #fff;
+  padding: 18px 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.p-header .brand {
+  display: flex; align-items: center; gap: 9px;
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.p-shell {
+  max-width: 620px;
+  margin: 0 auto;
+  padding: 26px 18px 60px;
+}
+
+.p-welcome {
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  padding: 22px 24px;
+  margin-bottom: 18px;
+  box-shadow: var(--shadow-card);
+}
+
+.p-welcome h2 { font-family: var(--font-display); font-size: 21px; color: var(--ink); }
+.p-welcome p { color: var(--ink-soft); font-size: 13.5px; margin-top: 4px; }
+
+.p-hero {
+  background: linear-gradient(175deg, var(--teal-700), var(--teal-800));
+  color: #fff;
+  border-radius: var(--radius-lg);
+  padding: 30px 26px;
+  text-align: center;
+  margin-bottom: 18px;
+  box-shadow: var(--shadow-card);
+}
+
+.p-hero .icon-badge {
+  width: 56px; height: 56px;
+  border-radius: 16px;
+  background: rgba(255,255,255,0.12);
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 16px;
+}
+
+.p-hero h2 { font-family: var(--font-display); font-size: 15px; font-weight: 500; opacity: 0.75; letter-spacing: 0.02em; }
+
+.p-hero .med-name {
+  font-family: var(--font-display);
+  font-size: 30px;
+  font-weight: 600;
+  margin: 10px 0 18px;
+}
+
+.p-hero .med-meta {
+  background: rgba(255,255,255,0.09);
+  border-radius: var(--radius-md);
+  padding: 16px 18px;
+  text-align: left;
+  display: grid;
+  gap: 10px;
+}
+
+.p-hero .med-meta div { display: flex; justify-content: space-between; font-size: 13.5px; }
+.p-hero .med-meta span:first-child { opacity: 0.7; }
+.p-hero .med-meta span:last-child { font-weight: 700; }
+
+.p-hero .no-reminder { opacity: 0.85; font-size: 14.5px; padding: 6px 0 2px; }
+
+.p-status {
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  padding: 20px 22px;
+  box-shadow: var(--shadow-card);
+}
+
+.p-status h3 { font-family: var(--font-display); font-size: 16px; margin-bottom: 14px; color: var(--ink); }
+
+.status-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--surface-sunk);
+  border-radius: var(--radius-sm);
+  margin-bottom: 8px;
+  font-size: 13.8px;
+}
+
+.status-row:last-child { margin-bottom: 0; }
+
+.status-row .dot {
+  width: 9px; height: 9px; border-radius: 50%;
+  background: var(--ink-soft);
+  flex-shrink: 0;
+}
+
+.status-row.ok .dot { background: var(--green-600); }
+.status-row.due .dot { background: var(--red-600); }
+.status-row.warn .dot { background: var(--amber-600); }
+
+.status-row b { color: var(--ink); }
+
+/* =====================================================================
+   REMINDER OVERLAY
+===================================================================== */
+
+#alertOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 30, 27, 0.55);
+  backdrop-filter: blur(2px);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 9999;
+}
+
+#alertBox {
+  width: 420px;
+  max-width: 100%;
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  padding: 32px 28px;
+  text-align: center;
+  box-shadow: var(--shadow-pop);
+  border-top: 6px solid var(--red-600);
+}
+
+#alertBox.kind-checkup { border-top-color: var(--teal-600); }
+#alertBox.kind-refill { border-top-color: var(--amber-600); }
+
+.alert-icon {
+  width: 60px; height: 60px;
+  border-radius: 18px;
+  margin: 0 auto 16px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--red-100);
+}
+
+.kind-checkup .alert-icon { background: var(--teal-100); }
+.kind-refill .alert-icon { background: var(--amber-100); }
+
+#alertBox h2 { font-family: var(--font-display); font-size: 20px; color: var(--ink); margin-bottom: 6px; }
+#alertBox .alert-sub { color: var(--ink-soft); font-size: 13.8px; margin-bottom: 14px; }
+
+#alertMedicine { font-family: var(--font-display); font-size: 24px; font-weight: 600; color: var(--teal-700); margin-bottom: 14px; }
+
+.alert-meta {
+  background: var(--surface-sunk);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  font-size: 13.8px;
+  color: var(--ink-soft);
+  margin-bottom: 20px;
+}
+
+.alert-ok {
+  width: 100%;
+  background: var(--green-600);
+  color: #fff;
+  border: none;
+  padding: 14px;
+  border-radius: var(--radius-sm);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.alert-ok:hover { filter: brightness(0.95); }
+
+.flash { animation: flashScreen 0.6s ease-in-out infinite; }
+
+@keyframes flashScreen {
+  0%, 100% { background-color: var(--bg); }
+  50% { background-color: var(--red-100); }
+}
+
+/* Toast (replaces intrusive window.alert for routine confirmations) */
+
+#toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: var(--ink);
+  color: #fff;
+  padding: 13px 20px;
+  border-radius: var(--radius-sm);
+  font-size: 13.8px;
+  font-weight: 600;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  z-index: 10000;
+  max-width: 90vw;
+}
+
+#toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* =====================================================================
+   RESPONSIVE
+===================================================================== */
+
+@media (max-width: 860px) {
+  .stat-grid { grid-template-columns: 1fr 1fr; }
+  .h-layout { flex-direction: column; }
+  .h-sidebar { width: 100%; display: flex; overflow-x: auto; gap: 4px; padding: 10px; }
+  .h-nav-btn { width: auto; flex-shrink: 0; }
+  .h-content { padding: 20px; }
+  .form-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 480px) {
+  .stat-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .stat-card p { font-size: 26px; }
+}
+
+</style>
+</head>
+<body>
+
+<!-- =====================================================================
+     LOGIN SCREEN
+===================================================================== -->
+
+<div id="loginScreen">
+  <div class="login-shell">
+
+    <div class="login-brand">
+      <div>
+        <div class="mark">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M12 2L4 5v6c0 5.2 3.4 9.5 8 11 4.6-1.5 8-5.8 8-11V5l-8-3z" fill="rgba(255,255,255,0.14)" stroke="white" stroke-width="1.4"/><path d="M12 8v8M8 12h8" stroke="white" stroke-width="1.6" stroke-linecap="round"/></svg>
+          MediMinder
+        </div>
+        <h1>Medication reminders your patients won't miss.</h1>
+        <p>One system, two clear views — hospitals manage prescriptions and appointments, patients see only what matters to them.</p>
+      </div>
+      <ul>
+        <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>Timed reminders with sound, vibration and a full-screen alert</li>
+        <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>Automatic refill warnings before medicine runs out</li>
+        <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>Hospital-side visibility into who has responded</li>
+      </ul>
+    </div>
+
+    <div class="login-form-side">
+      <h2>Sign in</h2>
+      <p class="sub">Choose your role to continue.</p>
+
+      <div class="role-switch">
+        <button type="button" id="roleBtnPatient" class="active" onclick="setLoginRole('patient')">Patient</button>
+        <button type="button" id="roleBtnHospital" onclick="setLoginRole('hospital')">Hospital</button>
+      </div>
+
+      <div class="field">
+        <label id="loginNameLabel" for="loginName">Patient name</label>
+        <input type="text" id="loginName" placeholder="e.g. Haroon" autocomplete="username">
+      </div>
+
+      <div class="field">
+        <label id="loginPassLabel" for="loginPassword">Private password</label>
+        <input type="password" id="loginPassword" placeholder="Provided by the hospital" autocomplete="current-password">
+      </div>
+
+      <button class="primary-btn" onclick="login()">Sign in</button>
+
+      <div class="login-error hidden" id="loginError"></div>
+
+      <div class="demo-info">
+        <b>Demo patient</b> — Haroon / 1234<br>
+        <b>Demo hospital</b> — Hospital / admin
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- =====================================================================
+     HOSPITAL CONSOLE
+===================================================================== -->
+
+<div id="hospitalScreen" class="hidden">
+
+  <div class="h-header">
+    <div>
+      <div class="brand">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 2L4 5v6c0 5.2 3.4 9.5 8 11 4.6-1.5 8-5.8 8-11V5l-8-3z" fill="rgba(255,255,255,0.14)" stroke="white" stroke-width="1.4"/><path d="M12 8v8M8 12h8" stroke="white" stroke-width="1.6" stroke-linecap="round"/></svg>
+        MediMinder Hospital Console
+      </div>
+      <div class="who">Signed in as Hospital Staff</div>
+    </div>
+    <button class="ghost-btn" onclick="logout()">Log out</button>
+  </div>
+
+  <div class="h-layout">
+
+    <div class="h-sidebar">
+      <button class="h-nav-btn active" data-page="dashboard" onclick="showHospitalPage('dashboard')">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="7" height="9" rx="1.5" stroke="currentColor" stroke-width="1.7"/><rect x="14" y="3" width="7" height="5" rx="1.5" stroke="currentColor" stroke-width="1.7"/><rect x="14" y="12" width="7" height="9" rx="1.5" stroke="currentColor" stroke-width="1.7"/><rect x="3" y="16" width="7" height="5" rx="1.5" stroke="currentColor" stroke-width="1.7"/></svg>
+        Dashboard
+      </button>
+      <button class="h-nav-btn" data-page="patientManagement" onclick="showHospitalPage('patientManagement')">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><circle cx="9" cy="8" r="3.4" stroke="currentColor" stroke-width="1.7"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M16 8.5a3 3 0 110 6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M21 20c0-2.6-1.7-4.8-4-5.6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+        Patients
+      </button>
+      <button class="h-nav-btn" data-page="prescription" onclick="showHospitalPage('prescription')">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><rect x="4" y="3" width="16" height="18" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="M8 8h8M8 12h8M8 16h5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+        Prescriptions
+      </button>
+      <button class="h-nav-btn" data-page="appointments" onclick="showHospitalPage('appointments')">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="M3 10h18M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+        Appointments
+      </button>
+      <button class="h-nav-btn" data-page="records" onclick="showHospitalPage('records')">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M6 3h9l4 4v14H6z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M9 12h6M9 16h6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+        Records &amp; Responses
+      </button>
+    </div>
+
+    <div class="h-content">
+
+      <!-- DASHBOARD -->
+      <section id="dashboard" class="page active">
+        <div class="page-head">
+          <h2>Dashboard</h2>
+          <p>A live snapshot across every registered patient.</p>
+        </div>
+
+        <div class="stat-grid">
+          <div class="stat-card">
+            <div class="stat-icon" style="background:var(--teal-100)">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><circle cx="9" cy="8" r="3.4" stroke="#12776A" stroke-width="1.8"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6" stroke="#12776A" stroke-width="1.8" stroke-linecap="round"/></svg>
+            </div>
+            <h3>Total patients</h3>
+            <p id="statPatients">0</p>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon" style="background:var(--amber-100)">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><rect x="4" y="3" width="16" height="18" rx="2" stroke="#C9821B" stroke-width="1.8"/><path d="M8 8h8M8 12h8" stroke="#C9821B" stroke-width="1.8" stroke-linecap="round"/></svg>
+            </div>
+            <h3>Active prescriptions</h3>
+            <p id="statPrescriptions">0</p>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon" style="background:var(--teal-100)">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="16" rx="2" stroke="#12776A" stroke-width="1.8"/><path d="M3 10h18" stroke="#12776A" stroke-width="1.8"/></svg>
+            </div>
+            <h3>Upcoming check-ups</h3>
+            <p id="statAppointments">0</p>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon" style="background:var(--green-100)">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="#1E8A5F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+            <h3>Doses confirmed today</h3>
+            <p id="statResponses">0</p>
+          </div>
+        </div>
+
+        <div class="table-panel">
+          <table>
+            <thead>
+              <tr>
+                <th>Patient</th>
+                <th>Current medicine</th>
+                <th>Scheduled time</th>
+                <th>Today's status</th>
+                <th>Refill</th>
+              </tr>
+            </thead>
+            <tbody id="dashboardTable"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- PATIENT MANAGEMENT -->
+      <section id="patientManagement" class="page">
+        <div class="page-head">
+          <h2>Patient management</h2>
+          <p>Register a patient and issue them a private login password.</p>
+        </div>
+
+        <div class="panel">
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="patientName">Patient name</label>
+              <input type="text" id="patientName" placeholder="Full name">
+            </div>
+            <div class="form-group">
+              <label for="patientPrivatePassword">Private password</label>
+              <input type="text" id="patientPrivatePassword" placeholder="Given to the patient">
+            </div>
+            <div class="form-group">
+              <label for="patientAge">Age</label>
+              <input type="number" id="patientAge" placeholder="Age" min="0">
+            </div>
+            <div class="form-group">
+              <label for="patientPhone">Phone number</label>
+              <input type="tel" id="patientPhone" placeholder="Phone number">
+            </div>
+          </div>
+          <div class="form-actions">
+            <button class="primary-btn" onclick="registerPatient()">Register patient</button>
+          </div>
+          <div class="form-note" id="patientFormNote"></div>
+        </div>
+
+        <div class="table-panel" style="margin-top:20px;">
+          <table>
+            <thead>
+              <tr><th>Patient</th><th>Age</th><th>Phone</th><th>Registered</th></tr>
+            </thead>
+            <tbody id="patientListTable"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- PRESCRIPTION -->
+      <section id="prescription" class="page">
+        <div class="page-head">
+          <h2>Doctor prescription</h2>
+          <p>Set the medicine schedule a patient will be reminded about.</p>
+        </div>
+
+        <div class="panel">
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="prescriptionPatient">Select patient</label>
+              <select id="prescriptionPatient"></select>
+            </div>
+            <div class="form-group">
+              <label for="doctorName">Doctor name</label>
+              <input type="text" id="doctorName" placeholder="Doctor name">
+            </div>
+            <div class="form-group">
+              <label for="medicineName">Medicine name</label>
+              <input type="text" id="medicineName" placeholder="e.g. Amoxicillin">
+            </div>
+            <div class="form-group">
+              <label for="tablets">Tablets per dose</label>
+              <input type="number" id="tablets" min="1" placeholder="e.g. 1">
+            </div>
+            <div class="form-group">
+              <label for="medicineTime">Medicine time</label>
+              <input type="time" id="medicineTime">
+            </div>
+            <div class="form-group">
+              <label for="foodInstruction">Food instruction</label>
+              <select id="foodInstruction">
+                <option>Before Food</option>
+                <option>After Food</option>
+                <option>With Food</option>
+                <option>Empty Stomach</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="quantity">Quantity (total tablets)</label>
+              <input type="number" id="quantity" min="1" placeholder="e.g. 20">
+            </div>
+            <div class="form-group">
+              <label for="startDate">Start date</label>
+              <input type="date" id="startDate">
+            </div>
+            <div class="form-group">
+              <label for="endDate">End date</label>
+              <input type="date" id="endDate">
+            </div>
+          </div>
+          <div class="form-actions">
+            <button class="primary-btn" onclick="savePrescription()">Save prescription</button>
+          </div>
+          <div class="form-note" id="prescriptionFormNote"></div>
+        </div>
+      </section>
+
+      <!-- APPOINTMENTS -->
+      <section id="appointments" class="page">
+        <div class="page-head">
+          <h2>Doctor check-up</h2>
+          <p>Schedule a check-up appointment and the patient gets reminded automatically.</p>
+        </div>
+
+        <div class="panel">
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="appointmentPatient">Select patient</label>
+              <select id="appointmentPatient"></select>
+            </div>
+            <div class="form-group">
+              <label for="appointmentDoctor">Doctor name</label>
+              <input type="text" id="appointmentDoctor" placeholder="Doctor name">
+            </div>
+            <div class="form-group">
+              <label for="checkupDate">Check-up date</label>
+              <input type="date" id="checkupDate">
+            </div>
+            <div class="form-group">
+              <label for="checkupTime">Check-up time</label>
+              <input type="time" id="checkupTime">
+            </div>
+          </div>
+          <div class="form-actions">
+            <button class="primary-btn" onclick="saveAppointment()">Save appointment</button>
+          </div>
+          <div class="form-note" id="appointmentFormNote"></div>
+        </div>
+      </section>
+
+      <!-- RECORDS -->
+      <section id="records" class="page">
+        <div class="page-head">
+          <h2>Prescription records &amp; reminder responses</h2>
+          <p>Everything the hospital needs to confirm a patient took their medicine.</p>
+        </div>
+
+        <div class="table-panel">
+          <table>
+            <thead>
+              <tr>
+                <th>Patient</th>
+                <th>Medicine</th>
+                <th>Dose</th>
+                <th>Time</th>
+                <th>Food</th>
+                <th>Today</th>
+                <th>Total confirmed</th>
+              </tr>
+            </thead>
+            <tbody id="recordsTable"></tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</div>
+
+
+<!-- =====================================================================
+     PATIENT SCREEN — reminders only, nothing else
+===================================================================== -->
+
+<div id="patientScreen" class="hidden">
+
+  <div class="p-header">
+    <div class="brand">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none"><path d="M12 2L4 5v6c0 5.2 3.4 9.5 8 11 4.6-1.5 8-5.8 8-11V5l-8-3z" fill="rgba(255,255,255,0.14)" stroke="white" stroke-width="1.4"/><path d="M12 8v8M8 12h8" stroke="white" stroke-width="1.6" stroke-linecap="round"/></svg>
+      MediMinder
+    </div>
+    <button class="ghost-btn" onclick="logout()">Log out</button>
+  </div>
+
+  <div class="p-shell">
+
+    <div class="p-welcome">
+      <h2>Hello, <span id="patientDisplayName">Patient</span></h2>
+      <p>Your medication and check-up reminders will appear here automatically.</p>
+    </div>
+
+    <div class="p-hero">
+      <div class="icon-badge">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><rect x="4" y="3" width="16" height="18" rx="2" stroke="white" stroke-width="1.7"/><path d="M8 8h8M8 12h8" stroke="white" stroke-width="1.7" stroke-linecap="round"/></svg>
+      </div>
+      <h2>Next medicine reminder</h2>
+      <div id="nextReminder" class="no-reminder">No prescription on file yet. Check back after your hospital visit.</div>
+    </div>
+
+    <div class="p-status">
+      <h3>Reminder status</h3>
+      <div class="status-row" id="medicineStatus"><span class="dot"></span><span>Medicine: waiting for reminder</span></div>
+      <div class="status-row" id="appointmentStatus"><span class="dot"></span><span>Check-up: no upcoming reminder</span></div>
+      <div class="status-row" id="refillStatus"><span class="dot"></span><span>Refill: no refill reminder</span></div>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- =====================================================================
+     REMINDER OVERLAY (shared by medicine / check-up / refill alerts)
+===================================================================== -->
+
+<div id="alertOverlay">
+  <div id="alertBox">
+    <div class="alert-icon" id="alertIcon">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><rect x="4" y="3" width="16" height="18" rx="2" stroke="#C93F2E" stroke-width="1.7"/><path d="M8 8h8M8 12h8" stroke="#C93F2E" stroke-width="1.7" stroke-linecap="round"/></svg>
+    </div>
+    <h2 id="alertTitle">Medicine reminder</h2>
+    <p class="alert-sub" id="alertSub">It's time to take your medicine.</p>
+    <div id="alertMedicine">Medicine</div>
+    <div class="alert-meta" id="alertMeta">Details</div>
+    <button class="alert-ok" id="alertOkBtn" onclick="acknowledgeAlert()">OK, got it</button>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+
+<script>
+/* =====================================================================
+   MEDIMINDER — APPLICATION SCRIPT
+   Organized into clear sections:
+     1. State & persistence
+     2. Auth (login / logout / role switch)
+     3. Hospital: navigation, patient CRUD, prescriptions, appointments
+     4. Hospital: dashboard + records rendering
+     5. Patient: reminder rendering
+     6. Reminder engine (medicine, check-up, refill)
+     7. Shared utilities (toast, audio, vibration)
+===================================================================== */
+
+/* ---------------------------------------------------------------------
+   1. STATE & PERSISTENCE
+
+   Everything lives in one localStorage record so the whole app works
+   from a single HTML file with no backend. Structure:
+
+   db = {
+     patients:      { [patientKey]: { name, password, age, phone, registeredOn } },
+     prescriptions: { [patientKey]: { doctor, medicine, tablets, time, food,
+                                       quantity, startDate, endDate } },
+     appointments:  { [patientKey]: { doctor, date, time } },
+     responses:     { [patientKey]: { medicineTakenToday, lastTakenDate,
+                                       totalConfirmed, checkupAcked } }
+   }
+
+   patientKey = the patient's name, lower-cased, used as a lookup id.
+--------------------------------------------------------------------- */
+
+const DB_KEY = "mediminder_db_v2";
+
+let db = null;               // in-memory copy of the persisted database
+let session = null;          // { role: 'hospital' | 'patient', patientKey }
+
+// Timers for the currently logged-in patient's reminders.
+let medicineTimer = null;
+let medicineFollowUpTimer = null;
+let checkupTimer = null;
+let checkupFollowUpTimer = null;
+
+let audioContext = null;
+let alarmActive = false;
+
+function patientKeyOf(name) {
+  return name.trim().toLowerCase();
+}
+
+function loadDb() {
+  const raw = localStorage.getItem(DB_KEY);
+  if (raw) {
+    try {
+      db = JSON.parse(raw);
+      return;
+    } catch (e) {
+      console.warn("Could not parse saved data, starting fresh.", e);
+    }
+  }
+  db = createDefaultDb();
+  saveDb();
+}
+
+function saveDb() {
+  localStorage.setItem(DB_KEY, JSON.stringify(db));
+}
+
+function createDefaultDb() {
+  // Seed with the original demo patient so the app is usable immediately.
+  const key = "haroon";
+  return {
+    patients: {
+      [key]: { name: "Haroon", password: "1234", age: 29, phone: "", registeredOn: todayISO() }
+    },
+    prescriptions: {
+      [key]: {
+        doctor: "Dr. Aisha Rahman",
+        medicine: "Amoxicillin",
+        tablets: "1",
+        time: "09:00",
+        food: "After Food",
+        quantity: "14",
+        startDate: todayISO(),
+        endDate: addDaysISO(todayISO(), 14)
+      }
+    },
+    appointments: {},
+    responses: {
+      [key]: { medicineTakenToday: false, lastTakenDate: "", totalConfirmed: 0, checkupAcked: false }
+    }
+  };
+}
+
+function ensureResponseRecord(key) {
+  if (!db.responses[key]) {
+    db.responses[key] = { medicineTakenToday: false, lastTakenDate: "", totalConfirmed: 0, checkupAcked: false };
+  }
+  return db.responses[key];
+}
+
+/* ---------------------------------------------------------------------
+   2. AUTH
+--------------------------------------------------------------------- */
+
+let loginRole = "patient";
+
+function setLoginRole(role) {
+  loginRole = role;
+  document.getElementById("roleBtnPatient").classList.toggle("active", role === "patient");
+  document.getElementById("roleBtnHospital").classList.toggle("active", role === "hospital");
+  document.getElementById("loginNameLabel").textContent = role === "patient" ? "Patient name" : "Hospital username";
+  document.getElementById("loginPassLabel").textContent = role === "patient" ? "Private password" : "Password";
+  document.getElementById("loginName").placeholder = role === "patient" ? "e.g. Haroon" : "Hospital";
+  hideLoginError();
+}
+
+function showLoginError(message) {
+  const el = document.getElementById("loginError");
+  el.textContent = message;
+  el.classList.remove("hidden");
+}
+
+function hideLoginError() {
+  document.getElementById("loginError").classList.add("hidden");
+}
+
+function login() {
+  const name = document.getElementById("loginName").value.trim();
+  const password = document.getElementById("loginPassword").value.trim();
+
+  if (!name || !password) {
+    showLoginError("Please enter both fields.");
+    return;
+  }
+
+  // Unlock audio only after a real user gesture (browser requirement).
+  try {
+    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    audioContext.resume();
+  } catch (e) { /* audio isn't critical to log in */ }
+
+  if (loginRole === "hospital") {
+    if (name.toLowerCase() === "hospital" && password === "admin") {
+      session = { role: "hospital" };
+      document.getElementById("loginScreen").classList.add("hidden");
+      document.getElementById("hospitalScreen").classList.remove("hidden");
+      renderHospitalEverything();
+      return;
+    }
+    showLoginError("Invalid hospital username or password.");
+    return;
+  }
+
+  // Patient login
+  const key = patientKeyOf(name);
+  const patient = db.patients[key];
+
+  if (!patient || patient.password !== password) {
+    showLoginError("Invalid name or password. Ask the hospital if you're unsure.");
+    return;
+  }
+
+  session = { role: "patient", patientKey: key };
+  document.getElementById("loginScreen").classList.add("hidden");
+  document.getElementById("patientScreen").classList.remove("hidden");
+  document.getElementById("patientDisplayName").textContent = patient.name;
+
+  renderPatientScreen();
+  scheduleMedicineReminder();
+  scheduleCheckupReminder();
+}
+
+function logout() {
+  clearAllTimers();
+  session = null;
+  location.reload();
+}
+
+function clearAllTimers() {
+  clearTimeout(medicineTimer);
+  clearTimeout(medicineFollowUpTimer);
+  clearTimeout(checkupTimer);
+  clearTimeout(checkupFollowUpTimer);
+}
+
+/* ---------------------------------------------------------------------
+   3. HOSPITAL — navigation, patient CRUD, prescriptions, appointments
+--------------------------------------------------------------------- */
+
+function showHospitalPage(pageId) {
+  document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
+  document.getElementById(pageId).classList.add("active");
+
+  document.querySelectorAll(".h-nav-btn").forEach(b => {
+    b.classList.toggle("active", b.dataset.page === pageId);
+  });
+}
+
+function registerPatient() {
+  const name = document.getElementById("patientName").value.trim();
+  const password = document.getElementById("patientPrivatePassword").value.trim();
+  const age = document.getElementById("patientAge").value.trim();
+  const phone = document.getElementById("patientPhone").value.trim();
+  const note = document.getElementById("patientFormNote");
+
+  if (!name || !password) {
+    note.textContent = "Enter a patient name and a private password.";
+    note.classList.add("show", "error");
+    return;
+  }
+
+  const key = patientKeyOf(name);
+  if (db.patients[key]) {
+    note.textContent = "A patient with this name is already registered.";
+    note.classList.add("show", "error");
+    return;
+  }
+
+  db.patients[key] = { name, password, age, phone, registeredOn: todayISO() };
+  ensureResponseRecord(key);
+  saveDb();
+
+  note.textContent = `${name} registered. Share the password "${password}" with them for login.`;
+  note.classList.remove("error");
+  note.classList.add("show");
+
+  document.getElementById("patientName").value = "";
+  document.getElementById("patientPrivatePassword").value = "";
+  document.getElementById("patientAge").value = "";
+  document.getElementById("patientPhone").value = "";
+
+  renderHospitalEverything();
+}
+
+function populatePatientSelects() {
+  const keys = Object.keys(db.patients);
+  const options = keys.length
+    ? keys.map(k => `<option value="${k}">${escapeHtml(db.patients[k].name)}</option>`).join("")
+    : `<option value="" disabled selected>No patients registered yet</option>`;
+
+  ["prescriptionPatient", "appointmentPatient"].forEach(id => {
+    const select = document.getElementById(id);
+    const previous = select.value;
+    select.innerHTML = options;
+    if (keys.includes(previous)) select.value = previous;
+  });
+}
+
+function savePrescription() {
+  const note = document.getElementById("prescriptionFormNote");
+  const key = document.getElementById("prescriptionPatient").value;
+
+  if (!key) {
+    note.textContent = "Register a patient before adding a prescription.";
+    note.classList.add("show", "error");
+    return;
+  }
+
+  const medicine = document.getElementById("medicineName").value.trim();
+  const time = document.getElementById("medicineTime").value;
+
+  if (!medicine || !time) {
+    note.textContent = "Medicine name and medicine time are required.";
+    note.classList.add("show", "error");
+    return;
+  }
+
+  db.prescriptions[key] = {
+    doctor: document.getElementById("doctorName").value.trim(),
+    medicine: medicine,
+    tablets: document.getElementById("tablets").value || "1",
+    time: time,
+    food: document.getElementById("foodInstruction").value,
+    quantity: document.getElementById("quantity").value || "0",
+    startDate: document.getElementById("startDate").value || todayISO(),
+    endDate: document.getElementById("endDate").value || ""
+  };
+
+  ensureResponseRecord(key);
+  saveDb();
+
+  note.textContent = `Prescription saved for ${db.patients[key].name}. They will be reminded at ${formatTime(time)}.`;
+  note.classList.remove("error");
+  note.classList.add("show");
+
+  renderHospitalEverything();
+
+  // If the hospital happens to be testing as the same logged-in patient
+  // in another tab, this tab's own patient session (if any) reschedules too.
+  if (session && session.role === "patient" && session.patientKey === key) {
+    scheduleMedicineReminder();
+  }
+}
+
+function saveAppointment() {
+  const note = document.getElementById("appointmentFormNote");
+  const key = document.getElementById("appointmentPatient").value;
+
+  if (!key) {
+    note.textContent = "Register a patient before scheduling a check-up.";
+    note.classList.add("show", "error");
+    return;
+  }
+
+  const date = document.getElementById("checkupDate").value;
+  const time = document.getElementById("checkupTime").value;
+
+  if (!date || !time) {
+    note.textContent = "Please select a check-up date and time.";
+    note.classList.add("show", "error");
+    return;
+  }
+
+  db.appointments[key] = {
+    doctor: document.getElementById("appointmentDoctor").value.trim(),
+    date: date,
+    time: time
+  };
+
+  ensureResponseRecord(key).checkupAcked = false;
+  saveDb();
+
+  note.textContent = `Check-up saved for ${db.patients[key].name} on ${formatDate(date)} at ${formatTime(time)}.`;
+  note.classList.remove("error");
+  note.classList.add("show");
+
+  renderHospitalEverything();
+
+  if (session && session.role === "patient" && session.patientKey === key) {
+    scheduleCheckupReminder();
+  }
+}
+
+/* ---------------------------------------------------------------------
+   4. HOSPITAL — dashboard + records rendering
+--------------------------------------------------------------------- */
+
+function renderHospitalEverything() {
+  populatePatientSelects();
+  renderPatientListTable();
+  renderDashboard();
+  renderRecordsTable();
+}
+
+function renderPatientListTable() {
+  const body = document.getElementById("patientListTable");
+  const keys = Object.keys(db.patients);
+
+  if (!keys.length) {
+    body.innerHTML = `<tr class="empty-row"><td colspan="4">No patients registered yet.</td></tr>`;
+    return;
+  }
+
+  body.innerHTML = keys.map(key => {
+    const p = db.patients[key];
+    return `<tr>
+      <td>${escapeHtml(p.name)}</td>
+      <td>${escapeHtml(p.age || "—")}</td>
+      <td>${escapeHtml(p.phone || "—")}</td>
+      <td>${formatDate(p.registeredOn)}</td>
+    </tr>`;
+  }).join("");
+}
+
+function renderDashboard() {
+  const patientKeys = Object.keys(db.patients);
+  const prescriptionKeys = Object.keys(db.prescriptions);
+  const appointmentKeys = Object.keys(db.appointments).filter(k => !isPastAppointment(db.appointments[k]));
+
+  document.getElementById("statPatients").textContent = patientKeys.length;
+  document.getElementById("statPrescriptions").textContent = prescriptionKeys.length;
+  document.getElementById("statAppointments").textContent = appointmentKeys.length;
+
+  const today = todayISO();
+  let confirmedToday = 0;
+  Object.values(db.responses).forEach(r => {
+    if (r.lastTakenDate === today) confirmedToday++;
+  });
+  document.getElementById("statResponses").textContent = confirmedToday;
+
+  const body = document.getElementById("dashboardTable");
+  if (!patientKeys.length) {
+    body.innerHTML = `<tr class="empty-row"><td colspan="5">No patients registered yet.</td></tr>`;
+    return;
+  }
+
+  body.innerHTML = patientKeys.map(key => {
+    const patient = db.patients[key];
+    const rx = db.prescriptions[key];
+    const response = ensureResponseRecord(key);
+
+    const medicine = rx ? escapeHtml(rx.medicine) : "—";
+    const time = rx ? formatTime(rx.time) : "—";
+
+    let statusPill = `<span class="pill neutral">No prescription</span>`;
+    if (rx) {
+      const takenToday = response.lastTakenDate === today;
+      statusPill = takenToday
+        ? `<span class="pill ok">Taken today</span>`
+        : `<span class="pill due">Awaiting dose</span>`;
+    }
+
+    let refillPill = `<span class="pill neutral">—</span>`;
+    if (rx && rx.quantity && rx.tablets) {
+      const daysLeft = estimateRefillDays(rx);
+      if (daysLeft <= 3) {
+        refillPill = `<span class="pill due">${daysLeft}d left</span>`;
+      } else if (daysLeft <= 7) {
+        refillPill = `<span class="pill warn">${daysLeft}d left</span>`;
+      } else {
+        refillPill = `<span class="pill ok">${daysLeft}d left</span>`;
+      }
+    }
+
+    return `<tr>
+      <td>${escapeHtml(patient.name)}</td>
+      <td>${medicine}</td>
+      <td>${time}</td>
+      <td>${statusPill}</td>
+      <td>${refillPill}</td>
+    </tr>`;
+  }).join("");
+}
+
+function renderRecordsTable() {
+  const body = document.getElementById("recordsTable");
+  const keys = Object.keys(db.patients);
+  const today = todayISO();
+
+  const rows = keys.filter(key => db.prescriptions[key]);
+
+  if (!rows.length) {
+    body.innerHTML = `<tr class="empty-row"><td colspan="7">No prescriptions recorded yet.</td></tr>`;
+    return;
+  }
+
+  body.innerHTML = rows.map(key => {
+    const patient = db.patients[key];
+    const rx = db.prescriptions[key];
+    const response = ensureResponseRecord(key);
+    const takenToday = response.lastTakenDate === today;
+
+    return `<tr>
+      <td>${escapeHtml(patient.name)}</td>
+      <td>${escapeHtml(rx.medicine)}</td>
+      <td>${escapeHtml(rx.tablets)} tablet(s)</td>
+      <td>${formatTime(rx.time)}</td>
+      <td>${escapeHtml(rx.food)}</td>
+      <td>${takenToday ? '<span class="pill ok">Taken</span>' : '<span class="pill due">Pending</span>'}</td>
+      <td>${response.totalConfirmed}</td>
+    </tr>`;
+  }).join("");
+}
+
+function isPastAppointment(appt) {
+  if (!appt || !appt.date) return true;
+  const dt = new Date(`${appt.date}T${appt.time || "00:00"}`);
+  return dt.getTime() < Date.now() - 24 * 60 * 60 * 1000;
+}
+
+/* ---------------------------------------------------------------------
+   5. PATIENT — reminder rendering
+--------------------------------------------------------------------- */
+
+function renderPatientScreen() {
+  if (!session || session.role !== "patient") return;
+
+  const key = session.patientKey;
+  const rx = db.prescriptions[key];
+  const appt = db.appointments[key];
+  const response = ensureResponseRecord(key);
+  const today = todayISO();
+
+  renderNextReminderCard(rx);
+
+  // Medicine status row
+  const medStatusRow = document.getElementById("medicineStatus");
+  if (!rx) {
+    setStatusRow(medStatusRow, "neutral", "Medicine: no active prescription");
+  } else if (response.lastTakenDate === today) {
+    setStatusRow(medStatusRow, "ok", `Medicine: <b>${escapeHtml(rx.medicine)}</b> taken today`);
+  } else {
+    setStatusRow(medStatusRow, "due", `Medicine: <b>${escapeHtml(rx.medicine)}</b> scheduled at <b>${formatTime(rx.time)}</b>`);
+  }
+
+  // Appointment status row
+  const apptStatusRow = document.getElementById("appointmentStatus");
+  if (!appt) {
+    setStatusRow(apptStatusRow, "neutral", "Check-up: no upcoming appointment");
+  } else {
+    setStatusRow(apptStatusRow, "ok", `Check-up: <b>${formatDate(appt.date)}</b> at <b>${formatTime(appt.time)}</b>`);
+  }
+
+  // Refill status row
+  updateRefillStatus();
+}
+
+function renderNextReminderCard(rx) {
+  const area = document.getElementById("nextReminder");
+
+  if (!rx) {
+    area.innerHTML = "No prescription on file yet. Check back after your hospital visit.";
+    area.className = "no-reminder";
+    return;
+  }
+
+  area.className = "";
+  area.innerHTML = `
+    <div class="med-name">${escapeHtml(rx.medicine)}</div>
+    <div class="med-meta">
+      <div><span>Dose</span><span>${escapeHtml(rx.tablets)} tablet(s)</span></div>
+      <div><span>Time</span><span>${formatTime(rx.time)}</span></div>
+      <div><span>Instruction</span><span>${escapeHtml(rx.food)}</span></div>
+      <div><span>Remaining</span><span>${escapeHtml(rx.quantity)} tablets</span></div>
+    </div>
+  `;
+}
+
+function setStatusRow(row, kind, html) {
+  row.className = "status-row " + kind;
+  row.querySelector("span:last-child").innerHTML = html;
+}
+
+function updateRefillStatus() {
+  if (!session || session.role !== "patient") return;
+  const key = session.patientKey;
+  const rx = db.prescriptions[key];
+  const row = document.getElementById("refillStatus");
+
+  if (!rx || !rx.quantity || !rx.tablets) {
+    setStatusRow(row, "neutral", "Refill: no refill reminder yet");
+    return;
+  }
+
+  const daysLeft = estimateRefillDays(rx);
+
+  if (daysLeft <= 0) {
+    setStatusRow(row, "due", "Refill: <b>medicine may have run out.</b> Please contact the hospital.");
+  } else if (daysLeft <= 3) {
+    setStatusRow(row, "due", `Refill: <b>only about ${daysLeft} day(s) left.</b> Please contact the hospital.`);
+  } else if (daysLeft <= 7) {
+    setStatusRow(row, "warn", `Refill: around <b>${daysLeft} days</b> of medicine remaining.`);
+  } else {
+    setStatusRow(row, "ok", `Refill: medicine available for about <b>${daysLeft} days</b>.`);
+  }
+}
+
+// Estimate remaining days from how long ago the course started, not just
+// total quantity — this matches how much the patient has actually used.
+function estimateRefillDays(rx) {
+  const dailyDose = Number(rx.tablets) || 1;
+  const totalQty = Number(rx.quantity) || 0;
+  const start = rx.startDate ? new Date(rx.startDate + "T00:00:00") : null;
+
+  let consumed = 0;
+  if (start) {
+    const elapsedDays = Math.max(0, Math.floor((Date.now() - start.getTime()) / 86400000));
+    consumed = elapsedDays * dailyDose;
+  }
+
+  const remaining = Math.max(0, totalQty - consumed);
+  return Math.floor(remaining / dailyDose);
+}
+
+/* ---------------------------------------------------------------------
+   6. REMINDER ENGINE
+   Each reminder type (medicine / check-up) follows the same pattern:
+     - schedule() finds the next trigger time and sets one timeout
+     - trigger() shows the alert and arms a single 10-minute follow-up
+     - acknowledging clears the follow-up and reschedules the next cycle
+--------------------------------------------------------------------- */
+
+const FOLLOW_UP_DELAY_MS = 10 * 60 * 1000; // one extra reminder after 10 min
+
+let currentAlertKind = null; // "medicine" | "checkup"
+
+function scheduleMedicineReminder() {
+  clearTimeout(medicineTimer);
+  if (!session || session.role !== "patient") return;
+
+  const rx = db.prescriptions[session.patientKey];
+  if (!rx || !rx.time) return;
+
+  const next = nextOccurrenceOf(rx.time);
+
+  // Respect the prescription's date range, if provided.
+  if (rx.endDate && next > new Date(rx.endDate + "T23:59:59")) return;
+
+  medicineTimer = setTimeout(triggerMedicineReminder, next.getTime() - Date.now());
+}
+
+function triggerMedicineReminder() {
+  const rx = db.prescriptions[session.patientKey];
+  if (!rx) return;
+
+  openAlert({
+    kind: "medicine",
+    title: "Medicine reminder",
+    sub: "It's time to take your medicine.",
+    heading: rx.medicine,
+    meta: `Take ${rx.tablets} tablet(s) · ${rx.food}`
+  });
+
+  clearTimeout(medicineFollowUpTimer);
+  medicineFollowUpTimer = setTimeout(() => {
+    if (currentAlertKind === null) { // only if it's still unacknowledged / closed and reopened
+      openAlert({
+        kind: "medicine",
+        title: "Medicine reminder",
+        sub: "Follow-up reminder — you haven't confirmed yet.",
+        heading: rx.medicine,
+        meta: `Take ${rx.tablets} tablet(s) · ${rx.food}`
+      });
+    }
+  }, FOLLOW_UP_DELAY_MS);
+}
+
+function scheduleCheckupReminder() {
+  clearTimeout(checkupTimer);
+  if (!session || session.role !== "patient") return;
+
+  const appt = db.appointments[session.patientKey];
+  if (!appt || !appt.date || !appt.time) return;
+
+  const apptTime = new Date(`${appt.date}T${appt.time}`);
+  const now = Date.now();
+
+  if (apptTime.getTime() <= now) return; // appointment already passed
+
+  checkupTimer = setTimeout(triggerCheckupReminder, apptTime.getTime() - now);
+}
+
+function triggerCheckupReminder() {
+  const appt = db.appointments[session.patientKey];
+  if (!appt) return;
+
+  openAlert({
+    kind: "checkup",
+    title: "Check-up reminder",
+    sub: "You have a doctor appointment now.",
+    heading: appt.doctor ? `Dr. ${appt.doctor}` : "Doctor check-up",
+    meta: `${formatDate(appt.date)} at ${formatTime(appt.time)}`
+  });
+
+  clearTimeout(checkupFollowUpTimer);
+  checkupFollowUpTimer = setTimeout(() => {
+    if (currentAlertKind === null) {
+      openAlert({
+        kind: "checkup",
+        title: "Check-up reminder",
+        sub: "Follow-up reminder — please confirm.",
+        heading: appt.doctor ? `Dr. ${appt.doctor}` : "Doctor check-up",
+        meta: `${formatDate(appt.date)} at ${formatTime(appt.time)}`
+      });
+    }
+  }, FOLLOW_UP_DELAY_MS);
+}
+
+function openAlert({ kind, title, sub, heading, meta }) {
+  currentAlertKind = kind;
+
+  const box = document.getElementById("alertBox");
+  box.className = kind === "checkup" ? "kind-checkup" : (kind === "refill" ? "kind-refill" : "");
+
+  document.getElementById("alertTitle").textContent = title;
+  document.getElementById("alertSub").textContent = sub;
+  document.getElementById("alertMedicine").textContent = heading;
+  document.getElementById("alertMeta").textContent = meta;
+
+  document.getElementById("alertOverlay").style.display = "flex";
+  document.body.classList.add("flash");
+
+  if (navigator.vibrate) navigator.vibrate([500, 300, 500, 300, 500]);
+
+  alarmActive = true;
+  playAlarm();
+}
+
+function acknowledgeAlert() {
+  const kind = currentAlertKind;
+
+  document.getElementById("alertOverlay").style.display = "none";
+  document.body.classList.remove("flash");
+  if (navigator.vibrate) navigator.vibrate(0);
+  alarmActive = false;
+  currentAlertKind = null;
+
+  if (!session || session.role !== "patient") return;
+  const key = session.patientKey;
+
+  if (kind === "medicine") {
+    clearTimeout(medicineFollowUpTimer);
+    const response = ensureResponseRecord(key);
+    response.medicineTakenToday = true;
+    response.lastTakenDate = todayISO();
+    response.totalConfirmed = (response.totalConfirmed || 0) + 1;
+    saveDb();
+
+    showToast("Medicine marked as taken. Thank you!");
+    renderPatientScreen();
+    scheduleMedicineReminder(); // arm tomorrow's reminder
+  }
+
+  if (kind === "checkup") {
+    clearTimeout(checkupFollowUpTimer);
+    const response = ensureResponseRecord(key);
+    response.checkupAcked = true;
+    saveDb();
+
+    showToast("Check-up reminder acknowledged.");
+    renderPatientScreen();
+  }
+}
+
+function nextOccurrenceOf(hhmm) {
+  const [hours, minutes] = hhmm.split(":").map(Number);
+  const candidate = new Date();
+  candidate.setHours(hours, minutes, 0, 0);
+  if (candidate.getTime() <= Date.now()) {
+    candidate.setDate(candidate.getDate() + 1);
+  }
+  return candidate;
+}
+
+/* ---------------------------------------------------------------------
+   7. SHARED UTILITIES
+--------------------------------------------------------------------- */
+
+function playAlarm() {
+  if (!alarmActive) return;
+
+  try {
+    if (!audioContext) {
+      audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    audioContext.resume();
+
+    const oscillator = audioContext.createOscillator();
+    const gain = audioContext.createGain();
+
+    oscillator.type = "sine";
+    oscillator.frequency.value = 900;
+    gain.gain.setValueAtTime(0.4, audioContext.currentTime);
+
+    oscillator.connect(gain);
+    gain.connect(audioContext.destination);
+
+    oscillator.start();
+    oscillator.stop(audioContext.currentTime + 0.9);
+  } catch (e) {
+    console.log("Sound error:", e);
+  }
+
+  if (alarmActive) setTimeout(playAlarm, 1500);
+}
+
+let toastTimer = null;
+function showToast(message) {
+  const toast = document.getElementById("toast");
+  toast.textContent = message;
+  toast.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.remove("show"), 3200);
+}
+
+function todayISO() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function addDaysISO(iso, days) {
+  const d = new Date(iso + "T00:00:00");
+  d.setDate(d.getDate() + days);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function formatDate(iso) {
+  if (!iso) return "—";
+  const d = new Date(iso + "T00:00:00");
+  return d.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
+}
+
+function formatTime(hhmm) {
+  if (!hhmm) return "—";
+  const [h, m] = hhmm.split(":").map(Number);
+  const period = h >= 12 ? "PM" : "AM";
+  const hour12 = ((h % 12) || 12);
+  return `${hour12}:${String(m).padStart(2, "0")} ${period}`;
+}
+
+function escapeHtml(value) {
+  return String(value ?? "").replace(/[&<>"']/g, c => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+  }[c]));
+}
+
+/* ---------------------------------------------------------------------
+   Refresh the refill status periodically for a logged-in patient, and
+   keep the hospital dashboard's refill column current too.
+--------------------------------------------------------------------- */
+
+setInterval(() => {
+  if (session && session.role === "patient") {
+    updateRefillStatus();
+  }
+  if (session && session.role === "hospital") {
+    renderDashboard();
+    renderRecordsTable();
+  }
+}, 30000);
+
+/* ---------------------------------------------------------------------
+   BOOT
+--------------------------------------------------------------------- */
+
+window.onload = function () {
+  loadDb();
+};
+
+</script>
+
+</body>
+</html>
